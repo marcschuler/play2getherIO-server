@@ -17,7 +17,7 @@ public class GroupService {
 
     private static final Cache<String, Group> groups = CacheBuilder
             .newBuilder()
-            .expireAfterAccess(60, TimeUnit.MINUTES)
+            .expireAfterAccess(12, TimeUnit.HOURS)
             .build();
 
     public synchronized Group generateGroup() {

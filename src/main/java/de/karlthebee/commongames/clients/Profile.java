@@ -13,4 +13,6 @@ public class Profile {
     private final String profileUrl;
     private final List<String> ownedGameIds;
 
+    private final List<String> friends;
+
 }

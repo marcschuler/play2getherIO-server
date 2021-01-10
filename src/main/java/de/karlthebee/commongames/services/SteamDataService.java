@@ -6,16 +6,15 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.clients.Game;
 import de.karlthebee.commongames.clients.Profile;
-import de.karlthebee.commongames.services.dto.SteamAppData;
-import de.karlthebee.commongames.services.dto.SteamGameData;
-import de.karlthebee.commongames.services.dto.SteamIdData;
-import de.karlthebee.commongames.services.dto.SteamProfileData;
+import de.karlthebee.commongames.services.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigInteger;
@@ -118,7 +117,7 @@ public class SteamDataService {
 
         games.getBody().getApplist().getApps().stream()
                 .forEach(app -> map.put(app.getAppid(), app.getName()));
-        log.info("Got " + map.size() + " games in " + (System.currentTimeMillis()- start) + "ms");
+        log.info("Got " + map.size() + " games in " + (System.currentTimeMillis() - start) + "ms");
         return map;
     }
 
@@ -134,20 +133,38 @@ public class SteamDataService {
                 .get()
                 .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("include_played_free_games", true).build())
                 .retrieve();
+        var friendsResponse = WebClient.create("http://api.steampowered.com/ISteamUser/GetFriendList/v0001")
+                .get()
+                .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("relationship", "friend").build())
+                .retrieve();
 
-        var profileData = profileResponse.toEntity(SteamProfileData.class).block();
-        var gameData = gameResponse.toEntity(SteamGameData.class).block();
-
-
+        ResponseEntity<SteamFriendData> friendsData = null;
+        ResponseEntity<SteamGameData> gameData;
+        ResponseEntity<SteamProfileData> profileData;
+        try {
+            profileData = profileResponse.toEntity(SteamProfileData.class).block();
+            gameData = gameResponse.toEntity(SteamGameData.class).block();
+        } catch (WebClientResponseException e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not get server data");
+        }
+        try {
+            friendsData = friendsResponse.toEntity(SteamFriendData.class).block();
+        } catch (WebClientResponseException e) {
+           log.info("Could not get friendlist of " + id);
+        }
         var player = profileData.getBody().getResponse().getPlayers()[0];
         if (gameData.getBody().getResponse().getGames() == null)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "This user does not exist or has no games");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This user ("+id+") does not exist or has no games");
         var games = gameData.getBody().getResponse().getGames().stream()
                 .map(SteamGameData.SteamGameDataListItem::getAppid)
                 .map(String::valueOf)
                 .collect(Collectors.toList());
+        var friends = friendsData == null ? new ArrayList<String>() : friendsData.getBody().getFriendslist().getFriends().stream()
+                .map(SteamFriendData.SteamFriendDataItem::getSteamid)
+                .collect(Collectors.toList());
 
-        var profile = new Profile(player.getSteamid(), player.getPersonaname(), player.getAvatarfull(), player.getProfileurl(), games);
+        var profile = new Profile(player.getSteamid(), player.getPersonaname(), player.getAvatarfull(), player.getProfileurl(), games, friends);
         log.info("Profile " + id + " is " + profile.getNickname() + "(" + profile.getId() + ")");
         return profile;
     }
