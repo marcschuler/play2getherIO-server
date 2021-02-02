@@ -16,6 +16,4 @@ public class WebDto {
     private Set<Profile> profiles;
     private Set<Game> games;
 
-    private List<Profile> friendsSuggestions;
-
 }

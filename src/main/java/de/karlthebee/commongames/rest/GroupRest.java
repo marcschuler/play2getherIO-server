@@ -1,5 +1,6 @@
 package de.karlthebee.commongames.rest;
 
+import de.karlthebee.commongames.clients.Profile;
 import de.karlthebee.commongames.clients.dto.WebDto;
 import de.karlthebee.commongames.rest.dto.GroupSetupDto;
 import de.karlthebee.commongames.services.DtoService;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -30,7 +32,7 @@ public class GroupRest {
     public WebDto createGroup(@RequestBody GroupSetupDto groupSetupDto) throws ExecutionException {
         var group = groupService.generateGroup();
         addFriend(group.getId(), groupSetupDto);
-        friendService.updateFriendGroupAsync(group);
+        friendService.resetFriendGroup(group); //not needed but recommended
         return dtoService.byId(group.getId());
     }
 
@@ -55,6 +57,12 @@ public class GroupRest {
         return dtoService.byId(gid);
     }
 
+    @GetMapping("{gid}/friends/suggestions")
+    public List<Profile> recommendedFriends(@PathVariable("gid") String gid) throws ExecutionException {
+        var group = groupService.getGroup(gid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group does not exist"));
+        return friendService.getCurrentSuggestions(group);
+    }
+
     @PostMapping("{gid}/friends")
     public WebDto addFriend(@PathVariable("gid") String gid, @RequestBody() GroupSetupDto groupSetupDto) throws ExecutionException {
         try {
@@ -62,7 +70,7 @@ public class GroupRest {
             var group = groupService.getGroup(gid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group does not exist"));
             group.getIds().add(profile.getId());
             group.update();
-            friendService.updateFriendGroupAsync(group);
+            friendService.resetFriendGroup(group);
             log.info("Added profile " + profile.getNickname());
             return dtoService.byId(gid);
         } catch (Exception e) {
@@ -79,7 +87,7 @@ public class GroupRest {
         if (!deleted)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The user is not on the list. Please reload the page");
         group.update();
-        friendService.updateFriendGroupAsync(group);
+        friendService.resetFriendGroup(group);
         log.info("Deleted profile " + profile.getNickname());
         return dtoService.byId(gid);
     }

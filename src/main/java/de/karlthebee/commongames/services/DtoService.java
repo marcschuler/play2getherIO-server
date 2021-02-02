@@ -56,8 +56,6 @@ public class DtoService {
                 .collect(Collectors.toSet());
         result.setGames(games);
 
-        result.setFriendsSuggestions(friendService.getCurrentSuggestions(group));
-
         return result;
     }
 }

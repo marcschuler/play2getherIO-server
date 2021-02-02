@@ -33,9 +33,12 @@ public class GroupService {
         return Optional.ofNullable(groups.getIfPresent(id));
     }
 
+    /**
+     * Generates an random group id
+     * @return the random id
+     */
     private String generateId() {
         var length = Math.max(6, (int) Math.ceil(Math.log10(groups.size()) + 1)); //Enough length for everybody
-
         StringBuilder id;
         do {
             id = new StringBuilder();
