@@ -38,7 +38,7 @@ public class SteamDataService {
 
     private final LoadingCache<String, Profile> profiles =
             CacheBuilder.newBuilder()
-                    .expireAfterWrite(5, TimeUnit.MINUTES)
+                    .expireAfterWrite(15, TimeUnit.MINUTES)
                     .build(new CacheLoader<>() {
                         @Override
                         public Profile load(String id) {
