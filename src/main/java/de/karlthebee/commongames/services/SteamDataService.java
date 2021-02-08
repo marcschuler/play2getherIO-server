@@ -151,11 +151,11 @@ public class SteamDataService {
         try {
             friendsData = friendsResponse.toEntity(SteamFriendData.class).block();
         } catch (WebClientResponseException e) {
-           log.info("Could not get friendlist of " + id);
+            log.info("Could not get friendlist of " + id);
         }
         var player = profileData.getBody().getResponse().getPlayers()[0];
         if (gameData.getBody().getResponse().getGames() == null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This user ("+id+") does not exist or has no games");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This user (" + id + ") does not exist or has no games");
         var games = gameData.getBody().getResponse().getGames().stream()
                 .map(SteamGameData.SteamGameDataListItem::getAppid)
                 .map(String::valueOf)
