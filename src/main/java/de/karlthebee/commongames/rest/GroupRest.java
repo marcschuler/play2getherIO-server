@@ -9,6 +9,7 @@ import de.karlthebee.commongames.services.GroupService;
 import de.karlthebee.commongames.services.SteamDataService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,6 +28,9 @@ public class GroupRest {
     private final GroupService groupService;
     private final DtoService dtoService;
     private final FriendService friendService;
+
+    @Value("${groups.profiles.max}")
+    private int groupProfilesMax;
 
     @PostMapping
     public WebDto createGroup(@RequestBody GroupSetupDto groupSetupDto) throws ExecutionException {
@@ -74,6 +78,9 @@ public class GroupRest {
 
         try {
             var group = groupService.getGroup(gid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group does not exist"));
+
+            if (group.getIds().size() + 1 == groupProfilesMax)
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot have more than 16 profiles");
 
             group.getIds().add(profile.getId());
             group.update();
