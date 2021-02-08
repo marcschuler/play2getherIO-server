@@ -64,10 +64,17 @@ public class GroupRest {
     }
 
     @PostMapping("{gid}/friends")
-    public WebDto addFriend(@PathVariable("gid") String gid, @RequestBody() GroupSetupDto groupSetupDto) throws ExecutionException {
+    public WebDto addFriend(@PathVariable("gid") String gid, @RequestBody() GroupSetupDto groupSetupDto) {
+        Profile profile = null;
         try {
-            var profile = steamDataService.getProfile(groupSetupDto.getProfile());
+            profile = steamDataService.getProfile(groupSetupDto.getProfile());
+        } catch (ExecutionException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find profile '" + groupSetupDto.getProfile() + "'");
+        }
+
+        try {
             var group = groupService.getGroup(gid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group does not exist"));
+
             group.getIds().add(profile.getId());
             group.update();
             friendService.resetFriendGroup(group);
@@ -75,7 +82,7 @@ public class GroupRest {
             return dtoService.byId(gid);
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not execute request");
         }
     }
 
@@ -83,6 +90,10 @@ public class GroupRest {
     public WebDto removeFriend(@PathVariable("gid") String gid, @PathVariable("fid") String fid) throws ExecutionException {
         var profile = steamDataService.getProfile(fid);
         var group = groupService.getGroup(gid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group does not exist"));
+
+        if (group.getIds().size() <= 1)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not remove the last profile");
+
         var deleted = group.getIds().remove(profile.getId());
         if (!deleted)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The user is not on the list. Please reload the page");
