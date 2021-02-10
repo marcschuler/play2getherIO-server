@@ -4,12 +4,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import de.karlthebee.commongames.clients.Game;
 import de.karlthebee.commongames.clients.Profile;
 import de.karlthebee.commongames.services.dto.*;
+import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class SteamDataService {
+public class SteamDataServiceImpl implements SteamDataService {
 
     @Value("${steam.key}")
     private String key;
@@ -59,10 +58,13 @@ public class SteamDataService {
     private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
 
 
+    @Override
     public Profile getProfile(String id) throws ExecutionException {
         id = id
                 .replace("https://steamcommunity.com/profiles/", "")
                 .replace("http://steamcommunity.com/profiles/", "");
+        if (id.endsWith("/"))   //Remove last "/" of URL
+            id = id.substring(0, id.length() - 1);
         try {
             //Is 64bit id?
             var idBI = new BigInteger(id);
@@ -78,11 +80,13 @@ public class SteamDataService {
     }
 
 
+    @Override
     public String getGameName(String id) throws ExecutionException {
         return this.games.get().get(id);
     }
 
-    private String fetchProfileId(String id) {
+    @Override
+    public String fetchProfileId(String id) {
         var newId = id.replace("https://steamcommunity.com/id/", "")
                 .replace("http://steamcommunity.com/id/", "")
                 .replace("/", "");
@@ -101,7 +105,8 @@ public class SteamDataService {
 
     }
 
-    private Map<String, String> fetchGames() {
+    @Override
+    public Map<String, String> fetchGames() {
         log.info("(Re)loading all games");
         long start = System.currentTimeMillis();
         var games = WebClient.builder()
@@ -121,7 +126,8 @@ public class SteamDataService {
         return map;
     }
 
-    private Profile fetchProfile(String id) {
+    @Override
+    public Profile fetchProfile(String id) {
         Objects.requireNonNull(id);
         Objects.requireNonNull(key);
 

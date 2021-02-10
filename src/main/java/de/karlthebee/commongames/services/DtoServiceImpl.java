@@ -2,14 +2,13 @@ package de.karlthebee.commongames.services;
 
 import de.karlthebee.commongames.clients.Game;
 import de.karlthebee.commongames.clients.dto.WebDto;
+import de.karlthebee.commongames.services.interfaces.DtoService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -17,12 +16,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class DtoService {
+public class DtoServiceImpl implements DtoService {
 
-    private final GroupService groupService;
-    private final SteamDataService steamDataService;
-    private final FriendService friendService;
+    private final GroupServiceImpl groupService;
+    private final SteamDataServiceImpl steamDataService;
+    private final FriendServiceImpl friendService;
 
+    @Override
     public WebDto byId(String id) {
         var groupOptional = groupService.getGroup(id);
         if (groupOptional.isEmpty())

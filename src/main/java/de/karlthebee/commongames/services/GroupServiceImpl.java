@@ -3,6 +3,7 @@ package de.karlthebee.commongames.services;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import de.karlthebee.commongames.clients.Group;
+import de.karlthebee.commongames.services.interfaces.GroupService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class GroupService {
+public class GroupServiceImpl implements GroupService {
 
     private static final char[] ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
 
@@ -20,6 +21,7 @@ public class GroupService {
             .expireAfterAccess(12, TimeUnit.HOURS)
             .build();
 
+    @Override
     public synchronized Group generateGroup() {
         var id = generateId();
         var group = new Group(id);
@@ -29,15 +31,13 @@ public class GroupService {
         return group;
     }
 
+    @Override
     public Optional<Group> getGroup(String id) {
         return Optional.ofNullable(groups.getIfPresent(id));
     }
 
-    /**
-     * Generates an random group id
-     * @return the random id
-     */
-    private String generateId() {
+    @Override
+    public String generateId() {
         var length = Math.max(6, (int) Math.ceil(Math.log10(groups.size()) + 1)); //Enough length for everybody
         StringBuilder id;
         do {

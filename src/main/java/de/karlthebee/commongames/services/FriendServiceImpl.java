@@ -1,11 +1,11 @@
 package de.karlthebee.commongames.services;
 
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.clients.Group;
 import de.karlthebee.commongames.clients.Profile;
+import de.karlthebee.commongames.services.interfaces.FriendService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -21,11 +21,11 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @AllArgsConstructor
-public class FriendService {
+public class FriendServiceImpl implements FriendService {
 
     private static final ExecutorService executorService = Executors.newFixedThreadPool(4);
 
-    private final SteamDataService steamDataService;
+    private final SteamDataServiceImpl steamDataService;
 
     private final LoadingCache<Group, List<Profile>> profiles =
             CacheBuilder.newBuilder()
@@ -37,34 +37,25 @@ public class FriendService {
                         }
                     });
 
-    /**
-     * Removes a friend group from the cache.
-     * Useful if new data should be given back to rest services
-     *
-     * @param group the group to delete
-     */
+    @Override
     public void resetFriendGroup(Group group) {
         profiles.invalidate(group);
     }
 
-    private List<Profile> fetchFriendList(Group group) {
+    @Override
+    public List<Profile> fetchFriendList(Group group) {
         log.info("Updating suggestions of " + group.getId());
         var friends = findFriends(group);
         return friends;
     }
 
-    /**
-     * Gets the current suggestions from cache or calculates
-     *
-     * @param group the group
-     * @return the recommended profiles
-     * @throws ExecutionException if the suggestions throws an error
-     */
+    @Override
     public @Nullable List<Profile> getCurrentSuggestions(Group group) throws ExecutionException {
         return profiles.get(group);
     }
 
-    private List<Profile> findFriends(Group group) {
+    @Override
+    public List<Profile> findFriends(Group group) {
         List<Profile> collect = findCommonFriends(group).stream()
                 .peek(f -> log.info("Finding friend data of " + f))
                 .map(profile -> {
@@ -82,6 +73,7 @@ public class FriendService {
         return collect;
     }
 
+    @Override
     public List<String> findCommonFriends(Group group) {
         var allfriends = group.getIds().stream()
                 .limit(5) //Only the first 10 IDs to avoid API spamming
