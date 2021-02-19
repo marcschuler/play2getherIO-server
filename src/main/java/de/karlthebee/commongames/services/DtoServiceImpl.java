@@ -1,7 +1,7 @@
 package de.karlthebee.commongames.services;
 
-import de.karlthebee.commongames.clients.Game;
-import de.karlthebee.commongames.clients.dto.WebDto;
+import de.karlthebee.commongames.model.Game;
+import de.karlthebee.commongames.dto.WebDto;
 import de.karlthebee.commongames.services.interfaces.DtoService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

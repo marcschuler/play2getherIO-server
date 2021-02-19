@@ -4,10 +4,12 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import de.karlthebee.commongames.clients.Profile;
-import de.karlthebee.commongames.services.dto.*;
+import de.karlthebee.commongames.dto.steam.*;
+import de.karlthebee.commongames.model.Profile;
+import de.karlthebee.commongames.services.interfaces.StatisticService;
 import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,14 +32,19 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SteamDataServiceImpl implements SteamDataService {
 
+    private final StatisticService statisticService;
     @Value("${steam.key}")
     private String key;
+    @Value("${steam.profiles.cachetime}")
+    private int steamProfilesCachetime;
+    @Value("${steam.profileid.cachetime}")
+    private int steamProfileidCachetime;
 
     private final BigInteger MAX_ULONG64 = new BigInteger("2").pow(64);
 
     private final LoadingCache<String, Profile> profiles =
             CacheBuilder.newBuilder()
-                    .expireAfterWrite(15, TimeUnit.MINUTES)
+                    .expireAfterWrite(steamProfilesCachetime, TimeUnit.MINUTES)
                     .build(new CacheLoader<>() {
                         @Override
                         public Profile load(String id) {
@@ -47,7 +54,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private final LoadingCache<String, String> profileIds =
             CacheBuilder.newBuilder()
-                    .expireAfterAccess(30, TimeUnit.MINUTES)
+                    .expireAfterAccess(steamProfileidCachetime, TimeUnit.MINUTES)
                     .build(new CacheLoader<>() {
                         @Override
                         public String load(String id) {
@@ -56,6 +63,10 @@ public class SteamDataServiceImpl implements SteamDataService {
                     });
 
     private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
+
+    public SteamDataServiceImpl(StatisticService statisticService) {
+        this.statisticService = statisticService;
+    }
 
 
     @Override

@@ -1,12 +1,8 @@
 package de.karlthebee.commongames.rest;
 
-import de.karlthebee.commongames.clients.Profile;
-import de.karlthebee.commongames.clients.dto.WebDto;
-import de.karlthebee.commongames.rest.dto.GroupSetupDto;
-import de.karlthebee.commongames.services.DtoServiceImpl;
-import de.karlthebee.commongames.services.FriendServiceImpl;
-import de.karlthebee.commongames.services.GroupServiceImpl;
-import de.karlthebee.commongames.services.SteamDataServiceImpl;
+import de.karlthebee.commongames.model.Profile;
+import de.karlthebee.commongames.dto.WebDto;
+import de.karlthebee.commongames.dto.GroupSetupDto;
 import de.karlthebee.commongames.services.interfaces.DtoService;
 import de.karlthebee.commongames.services.interfaces.FriendService;
 import de.karlthebee.commongames.services.interfaces.GroupService;

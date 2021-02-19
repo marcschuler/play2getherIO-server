@@ -1,6 +1,6 @@
 package de.karlthebee.commongames.services.interfaces;
 
-import de.karlthebee.commongames.clients.Profile;
+import de.karlthebee.commongames.model.Profile;
 
 import java.util.Map;
 import java.util.concurrent.ExecutionException;

@@ -1,4 +1,4 @@
-package de.karlthebee.commongames.clients;
+package de.karlthebee.commongames.model;
 
 import lombok.Data;
 

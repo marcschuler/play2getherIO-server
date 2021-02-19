@@ -1,4 +1,4 @@
-package de.karlthebee.commongames.rest.dto;
+package de.karlthebee.commongames.dto;
 
 import lombok.Data;
 

@@ -1,4 +1,4 @@
-package de.karlthebee.commongames.services.dto;
+package de.karlthebee.commongames.dto.steam;
 
 import lombok.Data;
 

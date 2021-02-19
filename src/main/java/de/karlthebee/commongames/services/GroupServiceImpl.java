@@ -2,7 +2,7 @@ package de.karlthebee.commongames.services;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import de.karlthebee.commongames.clients.Group;
+import de.karlthebee.commongames.model.Group;
 import de.karlthebee.commongames.services.interfaces.GroupService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

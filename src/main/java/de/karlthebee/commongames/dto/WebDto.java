@@ -1,11 +1,10 @@
-package de.karlthebee.commongames.clients.dto;
+package de.karlthebee.commongames.dto;
 
 
-import de.karlthebee.commongames.clients.Game;
-import de.karlthebee.commongames.clients.Profile;
+import de.karlthebee.commongames.model.Game;
+import de.karlthebee.commongames.model.Profile;
 import lombok.Data;
 
-import java.util.List;
 import java.util.Set;
 
 @Data

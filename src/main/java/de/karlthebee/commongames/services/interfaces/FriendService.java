@@ -1,7 +1,7 @@
 package de.karlthebee.commongames.services.interfaces;
 
-import de.karlthebee.commongames.clients.Group;
-import de.karlthebee.commongames.clients.Profile;
+import de.karlthebee.commongames.model.Group;
+import de.karlthebee.commongames.model.Profile;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
