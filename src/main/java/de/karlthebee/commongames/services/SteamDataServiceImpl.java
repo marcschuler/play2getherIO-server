@@ -6,10 +6,9 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.dto.steam.*;
 import de.karlthebee.commongames.model.Profile;
-import de.karlthebee.commongames.services.interfaces.StatisticService;
 import de.karlthebee.commongames.services.interfaces.SteamDataService;
+import de.karlthebee.commongames.services.interfaces.SteamIdService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +17,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +30,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SteamDataServiceImpl implements SteamDataService {
 
-    private final StatisticService statisticService;
+    private SteamIdService steamIdService;
+
     @Value("${steam.key}")
     private String key;
     @Value("${steam.profiles.cachetime}")
@@ -40,7 +39,6 @@ public class SteamDataServiceImpl implements SteamDataService {
     @Value("${steam.profileid.cachetime}")
     private int steamProfileidCachetime;
 
-    private final BigInteger MAX_ULONG64 = new BigInteger("2").pow(64);
 
     private final LoadingCache<String, Profile> profiles =
             CacheBuilder.newBuilder()
@@ -64,29 +62,22 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
 
-    public SteamDataServiceImpl(StatisticService statisticService) {
-        this.statisticService = statisticService;
+    public SteamDataServiceImpl(SteamIdService steamIdService) {
+        this.steamIdService = steamIdService;
     }
 
 
     @Override
     public Profile getProfile(String id) throws ExecutionException {
-        id = id
-                .replace("https://steamcommunity.com/profiles/", "")
-                .replace("http://steamcommunity.com/profiles/", "");
-        if (id.endsWith("/"))   //Remove last "/" of URL
-            id = id.substring(0, id.length() - 1);
-        try {
-            //Is 64bit id?
-            var idBI = new BigInteger(id);
-            if (idBI.compareTo(MAX_ULONG64) <= 0)
-                return profiles.get(id);
-        } catch (NumberFormatException e) {
-
-        }
         var oldId = id;
-        id = this.profileIds.get(oldId);
-        log.info("Profile change '" + oldId + "' -> '" + id + "'");
+        id = steamIdService.prepareId(id);
+
+        //Find real 64b id
+        if (!steamIdService.isId64(id)) {
+            id = this.profileIds.get(oldId);
+            log.info("Profile change '" + oldId + "' -> '" + id + "'");
+        }
+
         return profiles.get(id);
     }
 
