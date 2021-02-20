@@ -32,7 +32,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private SteamIdService steamIdService;
 
-    @Value("${steam.key}")
+    @Value("#{environment.STEAMKEY}")
     private String key;
     @Value("${steam.profiles.cachetime}")
     private int steamProfilesCachetime;
