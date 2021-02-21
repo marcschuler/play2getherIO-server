@@ -6,6 +6,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.dto.steam.*;
 import de.karlthebee.commongames.model.Profile;
+import de.karlthebee.commongames.services.interfaces.StatisticService;
 import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import de.karlthebee.commongames.services.interfaces.SteamIdService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SteamDataServiceImpl implements SteamDataService {
 
-    private SteamIdService steamIdService;
+    private final SteamIdService steamIdService;
+    private final StatisticService statisticService;
+
 
     @Value("${steam.key}")
     private String key;
@@ -62,8 +65,9 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
 
-    public SteamDataServiceImpl(SteamIdService steamIdService) {
+    public SteamDataServiceImpl(SteamIdService steamIdService, StatisticService statisticService) {
         this.steamIdService = steamIdService;
+        this.statisticService = statisticService;
     }
 
 
@@ -74,7 +78,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
         //Find real 64b id
         if (!steamIdService.isId64(id)) {
-            id = this.profileIds.get(oldId);
+            id = this.profileIds.get(id);
             log.info("Profile change '" + oldId + "' -> '" + id + "'");
         }
 
@@ -93,7 +97,7 @@ public class SteamDataServiceImpl implements SteamDataService {
                 .replace("http://steamcommunity.com/id/", "")
                 .replace("/", "");
 
-
+        statisticService.makeAuthorizedRequest();
         var profileIdData = WebClient.create("http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/")
                 .get()
                 .uri(builder -> builder.queryParam("key", key).queryParam("vanityurl", newId).build())
@@ -133,14 +137,17 @@ public class SteamDataServiceImpl implements SteamDataService {
         Objects.requireNonNull(id);
         Objects.requireNonNull(key);
 
+        statisticService.makeAuthorizedRequest();
         var profileResponse = WebClient.create("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002")
                 .get()
                 .uri(builder -> builder.queryParam("key", key).queryParam("steamids", id).build())
                 .retrieve();
+        statisticService.makeAuthorizedRequest();
         var gameResponse = WebClient.create("api.steampowered.com/IPlayerService/GetOwnedGames/v0001")
                 .get()
                 .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("include_played_free_games", true).build())
                 .retrieve();
+        statisticService.makeAuthorizedRequest();
         var friendsResponse = WebClient.create("http://api.steampowered.com/ISteamUser/GetFriendList/v0001")
                 .get()
                 .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("relationship", "friend").build())

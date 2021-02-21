@@ -7,8 +7,10 @@ import de.karlthebee.commongames.model.Group;
 import de.karlthebee.commongames.model.Profile;
 import de.karlthebee.commongames.services.interfaces.FriendService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -20,12 +22,15 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FriendServiceImpl implements FriendService {
 
     private static final ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     private final SteamDataServiceImpl steamDataService;
+
+    @Value("${groups.suggestions.max}")
+    private int suggestionsMax;
 
     private final LoadingCache<Group, List<Profile>> profiles =
             CacheBuilder.newBuilder()
@@ -67,7 +72,7 @@ public class FriendServiceImpl implements FriendService {
                     }
                 })
                 .filter(Objects::nonNull)
-                .limit(15)
+                .limit(suggestionsMax)
                 .collect(Collectors.toList());
         log.info("Friends found. Returning");
         return collect;

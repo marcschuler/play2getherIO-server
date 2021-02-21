@@ -4,18 +4,25 @@ import de.karlthebee.commongames.services.interfaces.StatisticService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 @Service
 public class StatisticServiceImpl implements StatisticService {
 
-    private static final List<LocalDateTime> stats = new ArrayList<>();
+    private static final Map<LocalDateTime, Integer> stats = new HashMap<>();
 
 
-    public void makeAuthorizedRequest() {
-        stats.add(LocalDateTime.now());
+    public synchronized void makeAuthorizedRequest() {
+        var time = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+        if (!stats.containsKey(time)) {
+            stats.put(time, 0);
+        }
+        stats.put(time, stats.get(time) + 1);
     }
 
     public long getLast15Minutes() {
@@ -35,7 +42,14 @@ public class StatisticServiceImpl implements StatisticService {
     }
 
     public long getLastInterval(LocalDateTime datetime) {
-        return stats.stream().filter(dt -> dt.isAfter(datetime))
-                .count();
+        var now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+        datetime = datetime.truncatedTo(ChronoUnit.MINUTES);
+        long value = 0;
+        while (!datetime.isAfter(now)) {
+            if (stats.containsKey(datetime))
+                value += stats.get(datetime);
+            datetime = datetime.plusMinutes(1);
+        }
+        return value;
     }
 }
