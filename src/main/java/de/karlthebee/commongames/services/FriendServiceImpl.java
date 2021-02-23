@@ -61,7 +61,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     public List<Profile> findFriends(Group group) {
-        List<Profile> collect = findCommonFriends(group).stream()
+        List<Profile> collect = findCommonFriends(group).parallelStream()
                 .peek(f -> log.info("Finding friend data of " + f))
                 .map(profile -> {
                     try {
@@ -100,7 +100,7 @@ public class FriendServiceImpl implements FriendService {
 
         var friends = friendsSorted.stream()
                 .map(Map.Entry::getKey)
-                .limit(30)
+                .limit(suggestionsMax)
                 .collect(Collectors.toList());
         log.info("Returing common friend list");
         return friends;
