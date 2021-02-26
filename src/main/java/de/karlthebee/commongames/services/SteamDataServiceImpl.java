@@ -9,6 +9,7 @@ import de.karlthebee.commongames.model.Profile;
 import de.karlthebee.commongames.services.interfaces.StatisticService;
 import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import de.karlthebee.commongames.services.interfaces.SteamIdService;
+import de.karlthebee.commongames.services.interfaces.SteamWebCache;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,41 +36,16 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private final SteamIdService steamIdService;
     private final StatisticService statisticService;
+    private final SteamWebCache steamWebCache;
 
-
-    @Value("${steam.key}")
-    private String key;
-    @Value("${steam.profiles.cachetime}")
-    private int steamProfilesCachetime;
-    @Value("${steam.profileid.cachetime}")
-    private int steamProfileidCachetime;
-
-
-    private final LoadingCache<String, Profile> profiles =
-            CacheBuilder.newBuilder()
-                    .expireAfterWrite(steamProfilesCachetime, TimeUnit.MINUTES)
-                    .build(new CacheLoader<>() {
-                        @Override
-                        public Profile load(String id) {
-                            return fetchProfile(id);
-                        }
-                    });
-
-    private final LoadingCache<String, String> profileIds =
-            CacheBuilder.newBuilder()
-                    .expireAfterAccess(steamProfileidCachetime, TimeUnit.MINUTES)
-                    .build(new CacheLoader<>() {
-                        @Override
-                        public String load(String id) {
-                            return fetchProfileId(id);
-                        }
-                    });
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
 
     private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
 
-    public SteamDataServiceImpl(SteamIdService steamIdService, StatisticService statisticService) {
+    public SteamDataServiceImpl(SteamIdService steamIdService, StatisticService statisticService, SteamWebCache steamWebCache) {
         this.steamIdService = steamIdService;
         this.statisticService = statisticService;
+        this.steamWebCache = steamWebCache;
     }
 
 
@@ -78,37 +56,33 @@ public class SteamDataServiceImpl implements SteamDataService {
 
         //Find real 64b id
         if (!steamIdService.isId64(id)) {
-            id = this.profileIds.get(id);
+            id = this.steamWebCache.profileId(id);
             log.info("Profile change '" + oldId + "' -> '" + id + "'");
         }
 
-        return profiles.get(id);
+        return fetchProfile(id);
+    }
+
+    @Override
+    public Profile getEmptyFriendProfile(String id) {
+        var profileFuture = threadPool.submit(() -> steamWebCache.profileData(id));
+        SteamProfileData profile = null;
+        try {
+            profile = profileFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        var player = profile.getResponse().getPlayers()[0];
+
+        var p = new Profile(player.getSteamid(), player.getPersonaname(), player.getAvatarfull(), player.getProfileurl(),new ArrayList<>(), new ArrayList<>());
+        log.info("Profile " + id + " is " + p.getNickname() + "(" + p.getId() + ")");
+        return p;
     }
 
 
     @Override
     public String getGameName(String id) throws ExecutionException {
         return this.games.get().get(id);
-    }
-
-    @Override
-    public String fetchProfileId(String id) {
-        var newId = id.replace("https://steamcommunity.com/id/", "")
-                .replace("http://steamcommunity.com/id/", "")
-                .replace("/", "");
-
-        statisticService.makeAuthorizedRequest();
-        var profileIdData = WebClient.create("http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/")
-                .get()
-                .uri(builder -> builder.queryParam("key", key).queryParam("vanityurl", newId).build())
-                .retrieve()
-                .toEntity(SteamIdData.class).block();
-
-        var response = profileIdData.getBody().getResponse();
-        if (response.getSuccess() != 1)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find user '" + newId + "' ('" + id + "')");
-        return response.getSteamid();
-
     }
 
     @Override
@@ -135,52 +109,41 @@ public class SteamDataServiceImpl implements SteamDataService {
     @Override
     public Profile fetchProfile(String id) {
         Objects.requireNonNull(id);
-        Objects.requireNonNull(key);
 
-        statisticService.makeAuthorizedRequest();
-        var profileResponse = WebClient.create("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002")
-                .get()
-                .uri(builder -> builder.queryParam("key", key).queryParam("steamids", id).build())
-                .retrieve();
-        statisticService.makeAuthorizedRequest();
-        var gameResponse = WebClient.create("api.steampowered.com/IPlayerService/GetOwnedGames/v0001")
-                .get()
-                .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("include_played_free_games", true).build())
-                .retrieve();
-        statisticService.makeAuthorizedRequest();
-        var friendsResponse = WebClient.create("http://api.steampowered.com/ISteamUser/GetFriendList/v0001")
-                .get()
-                .uri(builder -> builder.queryParam("key", key).queryParam("steamid", id).queryParam("relationship", "friend").build())
-                .retrieve();
+        var profileFuture = threadPool.submit(() -> steamWebCache.profileData(id));
+        var gameFuture = threadPool.submit(() -> steamWebCache.gameData(id));
+        var friendFuture = threadPool.submit(() -> steamWebCache.friendData(id));
 
-        ResponseEntity<SteamFriendData> friendsData = null;
-        ResponseEntity<SteamGameData> gameData;
-        ResponseEntity<SteamProfileData> profileData;
+        SteamProfileData profile = null;
+        SteamGameData game = null;
+        SteamFriendData friends = null;
         try {
-            profileData = profileResponse.toEntity(SteamProfileData.class).block();
-            gameData = gameResponse.toEntity(SteamGameData.class).block();
-        } catch (WebClientResponseException e) {
+            profile = profileFuture.get();
+            game = gameFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not get server data");
         }
-        try {
-            friendsData = friendsResponse.toEntity(SteamFriendData.class).block();
-        } catch (WebClientResponseException e) {
-            log.info("Could not get friendlist of " + id);
+        try{
+            friends = friendFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.info("Could not get friend list");
         }
-        var player = profileData.getBody().getResponse().getPlayers()[0];
-        if (gameData.getBody().getResponse().getGames() == null)
+
+        var player = profile.getResponse().getPlayers()[0];
+        if (game.getResponse().getGames() == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This user (" + id + ") does not exist or has no games");
-        var games = gameData.getBody().getResponse().getGames().stream()
+
+        var games = game.getResponse().getGames().stream()
                 .map(SteamGameData.SteamGameDataListItem::getAppid)
                 .map(String::valueOf)
                 .collect(Collectors.toList());
-        var friends = friendsData == null ? new ArrayList<String>() : friendsData.getBody().getFriendslist().getFriends().stream()
+
+        var friendsList = friends == null ? new ArrayList<String>() : friends.getFriendslist().getFriends().stream()
                 .map(SteamFriendData.SteamFriendDataItem::getSteamid)
                 .collect(Collectors.toList());
 
-        var profile = new Profile(player.getSteamid(), player.getPersonaname(), player.getAvatarfull(), player.getProfileurl(), games, friends);
-        log.info("Profile " + id + " is " + profile.getNickname() + "(" + profile.getId() + ")");
-        return profile;
+        var p = new Profile(player.getSteamid(), player.getPersonaname(), player.getAvatarfull(), player.getProfileurl(), games, friendsList);
+        log.info("Profile " + id + " is " + p.getNickname() + "(" + p.getId() + ")");
+        return p;
     }
 }

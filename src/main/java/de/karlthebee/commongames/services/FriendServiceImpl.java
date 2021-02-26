@@ -65,7 +65,7 @@ public class FriendServiceImpl implements FriendService {
                 .peek(f -> log.info("Finding friend data of " + f))
                 .map(profile -> {
                     try {
-                        return steamDataService.getProfile(profile);
+                        return steamDataService.getEmptyFriendProfile(profile);
                     } catch (Exception e) {
                         log.warn("Could not find friend " + profile);
                         return null;
