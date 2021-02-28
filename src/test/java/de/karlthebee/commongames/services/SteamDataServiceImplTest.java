@@ -5,6 +5,7 @@ import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.concurrent.ExecutionException;
 
@@ -18,7 +19,7 @@ class SteamDataServiceImplTest {
 
     @Test
     void getProfile() throws ExecutionException {
-        assertThrows(UncheckedExecutionException.class,()->{
+        assertThrows(ResponseStatusException.class,()->{
             steamDataService.getProfile("invalid-id");
         });
 
