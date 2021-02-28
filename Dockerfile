@@ -1,4 +1,5 @@
 FROM maven:3-openjdk-15 as builder
+ARG STEAMKEY
 COPY . .
 RUN mvn package
 
