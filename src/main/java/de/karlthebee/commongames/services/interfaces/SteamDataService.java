@@ -15,7 +15,7 @@ public interface SteamDataService {
      */
     Profile getEmptyFriendProfile(String id);
 
-    String getGameName(String id) throws ExecutionException;
+    String getGameName(String id);
 
     Map<String, String> fetchGames();
 

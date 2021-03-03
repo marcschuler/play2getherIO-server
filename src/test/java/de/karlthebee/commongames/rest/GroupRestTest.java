@@ -2,7 +2,6 @@ package de.karlthebee.commongames.rest;
 
 import de.karlthebee.commongames.dto.GroupSetupDto;
 import de.karlthebee.commongames.dto.WebDto;
-import de.karlthebee.commongames.services.SteamDataServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

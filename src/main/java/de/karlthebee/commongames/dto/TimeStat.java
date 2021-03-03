@@ -2,7 +2,6 @@ package de.karlthebee.commongames.dto;
 
 import lombok.Builder;
 import lombok.Data;
-import org.apache.tomcat.jni.Local;
 
 import java.time.LocalDateTime;
 

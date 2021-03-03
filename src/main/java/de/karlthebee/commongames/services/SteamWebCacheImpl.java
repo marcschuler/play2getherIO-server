@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("NullableProblems")
 @Service
 @Slf4j
 @RequiredArgsConstructor

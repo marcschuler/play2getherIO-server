@@ -16,6 +16,6 @@ class GroupServiceImplTest {
     @Test
     void generateId() {
         var id = groupService.generateId();
-        assertTrue(id.length()==6);
+        assertEquals(id.length(), 6);
     }
 }

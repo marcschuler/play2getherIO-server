@@ -7,7 +7,7 @@ public class SteamIdData {
     private SteamIdDataResponse response;
 
     @Data
-    public class SteamIdDataResponse {
+    public static class SteamIdDataResponse {
         private int success; //1=success, 42=not
         private String steamid;
         private String message;

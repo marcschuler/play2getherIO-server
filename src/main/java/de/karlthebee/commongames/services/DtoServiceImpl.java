@@ -45,14 +45,7 @@ public class DtoServiceImpl implements DtoService {
 
         var games = result.getProfiles().stream()
                 .flatMap(profile -> profile.getOwnedGameIds().stream())
-                .map(gameid -> {
-                    try {
-                        return new Game(gameid, steamDataService.getGameName(gameid));
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                })
+                .map(gameid -> new Game(gameid, steamDataService.getGameName(gameid)))
                 .collect(Collectors.toSet());
         result.setGames(games);
 

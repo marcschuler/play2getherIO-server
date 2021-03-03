@@ -6,7 +6,6 @@ import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.model.Group;
 import de.karlthebee.commongames.model.Profile;
 import de.karlthebee.commongames.services.interfaces.FriendService;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -36,6 +35,7 @@ public class FriendServiceImpl implements FriendService {
             CacheBuilder.newBuilder()
                     .expireAfterAccess(30, TimeUnit.MINUTES)
                     .build(new CacheLoader<>() {
+                        @SuppressWarnings("NullableProblems")
                         @Override
                         public List<Profile> load(Group group) {
                             return fetchFriendList(group);
@@ -81,7 +81,7 @@ public class FriendServiceImpl implements FriendService {
     @Override
     public List<String> findCommonFriends(Group group) {
         var allfriends = group.getIds().stream()
-                .limit(5) //Only the first 10 IDs to avoid API spamming
+                .limit(8) //Only the first 8 IDs to avoid API spamming
                 .map(pid -> {
                     try {
                         return steamDataService.getProfile(pid);
@@ -94,6 +94,7 @@ public class FriendServiceImpl implements FriendService {
                 .filter(profile -> !group.getIds().contains(profile))   //Remove existing profiles
                 .collect(Collectors.groupingBy(p -> p, Collectors.counting()));
 
+        //Use the most commonly named friends
         var friendsSorted = new ArrayList<>(allfriends.entrySet());
         friendsSorted.sort(Map.Entry.comparingByValue());
         Collections.reverse(friendsSorted);

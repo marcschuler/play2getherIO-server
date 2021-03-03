@@ -33,7 +33,7 @@ public class GroupRest {
     private int groupProfilesMax;
 
     @PostMapping
-    public WebDto createGroup(@RequestBody GroupSetupDto groupSetupDto) throws ExecutionException {
+    public WebDto createGroup(@RequestBody GroupSetupDto groupSetupDto) {
         var group = groupService.generateGroup();
         addFriend(group.getId(), groupSetupDto);
         friendService.resetFriendGroup(group); //not needed but recommended
@@ -69,7 +69,7 @@ public class GroupRest {
 
     @PostMapping("{gid}/friends")
     public WebDto addFriend(@PathVariable("gid") String gid, @RequestBody() GroupSetupDto groupSetupDto) {
-        Profile profile = null;
+        Profile profile;
         try {
             profile = steamDataService.getProfile(groupSetupDto.getProfile());
         } catch (ExecutionException e) {

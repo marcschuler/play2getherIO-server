@@ -10,7 +10,7 @@ public class SteamGameData {
     private SteamGameDataList response;
 
     @Data
-    public class SteamGameDataList {
+    public static class SteamGameDataList {
         private int game_count; //int should be enough?
         private List<SteamGameDataListItem> games;
     }

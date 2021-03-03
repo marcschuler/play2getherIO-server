@@ -1,9 +1,6 @@
 package de.karlthebee.commongames.services;
 
 import com.google.common.base.Suppliers;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import de.karlthebee.commongames.dto.steam.*;
 import de.karlthebee.commongames.model.Profile;
 import de.karlthebee.commongames.services.interfaces.StatisticService;
@@ -11,12 +8,9 @@ import de.karlthebee.commongames.services.interfaces.SteamDataService;
 import de.karlthebee.commongames.services.interfaces.SteamIdService;
 import de.karlthebee.commongames.services.interfaces.SteamWebCache;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -40,7 +34,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
 
-    private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(() -> fetchGames(), 30, TimeUnit.MINUTES);
+    private final Supplier<Map<String, String>> games = Suppliers.memoizeWithExpiration(this::fetchGames, 30, TimeUnit.MINUTES);
 
     public SteamDataServiceImpl(SteamIdService steamIdService, StatisticService statisticService, SteamWebCache steamWebCache) {
         this.steamIdService = steamIdService;
@@ -81,7 +75,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
 
     @Override
-    public String getGameName(String id) throws ExecutionException {
+    public String getGameName(String id) {
         return this.games.get().get(id);
     }
 
@@ -100,7 +94,7 @@ public class SteamDataServiceImpl implements SteamDataService {
 
         var map = new HashMap<String, String>();
 
-        games.getBody().getApplist().getApps().stream()
+        games.getBody().getApplist().getApps()
                 .forEach(app -> map.put(app.getAppid(), app.getName()));
         log.info("Got " + map.size() + " games in " + (System.currentTimeMillis() - start) + "ms");
         return map;
